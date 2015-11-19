@@ -1,6 +1,6 @@
 #! /bin/bash
 
-source ./bash_ui.sh
+source bash_ui.sh
 
 CHOICES=`find . -maxdepth 1 -mindepth 1 -type d -printf '%f\n'`
 
