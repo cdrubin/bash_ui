@@ -2,7 +2,7 @@
 
 source bash_ui.sh
 
-CHOICES=`find . -maxdepth 1 -mindepth 1 -type d -printf '%f\n'`
+CHOICES=`find . -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | sort`
 
 choose_one
 echo "$CHOICE was chosen"
