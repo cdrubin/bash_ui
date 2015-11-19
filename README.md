@@ -32,7 +32,7 @@ Ask user to select from a set of options
 source bash_ui.sh
 
 CHOICES=`find . -maxdepth 1 -mindepth 1 -type d -printf '%f\n'`
-choose_mulitple
+choose_multiple
 
 echo $CHOSEN
 echo $CHOSEN_LINES
