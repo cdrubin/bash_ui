@@ -116,11 +116,14 @@ function choose_one() {
 function _update_chosen() {
 
 	CHOSEN=""
+	CHOSEN_LINES=""
 	for i in $(seq 0 $NUMBER_OF_CHOICES); do
 		for ENTRY in $CHOSEN_NUMBERS; do
 			#echo $ENTRY
 			if [ "$ENTRY" == "$i" ]; then
 				CHOICE_LINE=`echo "$CHOICES" | sed -n "$ENTRY"P`
+				#CHOSEN_NUMBERS=$(printf "$CHOSEN_NUMBERS\n$CHOICE_NUMBER")
+				CHOSEN_LINES=$(printf "$CHOSEN_LINES\n$CHOICE_LINE")
 				CHOSEN="$CHOSEN $CHOICE_LINE"
 				#echo "here"
 			fi
@@ -128,6 +131,14 @@ function _update_chosen() {
 	done
 }
 
+
+#
+# $CHOICES should be a string of lines of the available choices
+# $TOP will be set
+# $CHOICE will be set
+# $CHOSEN with be set as a space separated string of the chosen items
+# $CHOSEN_LINES with be set as a newline separated string of the chosen items
+#
 
 function choose_multiple() {
 
@@ -165,6 +176,9 @@ function choose_multiple() {
 
 		if [ "$KEY" == "$ESCM" ]; then
 			if [ $CHOICE_NUMBER -eq $NUMBER_OF_CHOICES ]; then
+				CHOSEN_LINES="${CHOSEN_LINES:1}"
+				CHOSEN="${CHOSEN:1}"
+
 				break;
 			fi;
 
