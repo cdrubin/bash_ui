@@ -87,11 +87,11 @@ function _choose_refresh() {
 
 	OLDIFS="$IFS"
 	IFS=$'\n' # make newlines the token breaks
-	for ENTRY in "$CHOICES"; do
+	for ENTRY in $CHOICES; do
 		if [ $NUM -eq $CHOICE_NUMBER ]; then
-			tput smso; echo "$ENTRY"; tput rmso;
+			tput smso; echo $ENTRY; tput rmso;
 		else
-			tput el; echo "$ENTRY"
+			tput el; echo $ENTRY
 		fi
 		((NUM++))
 	done;
