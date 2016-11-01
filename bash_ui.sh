@@ -110,10 +110,13 @@ function choose_one() {
 	NUMBER_OF_CHOICES=`echo "$CHOICES" | wc -l`
 	CHOICE_NUMBER=1
 
+	OLDIFS="$IFS"
+	IFS=$'\n' # make newlines the token breaks
 	# print choices for the first time
 	for ENTRY in "$CHOICES"; do
 		echo "$ENTRY"
 	done
+	IFS="$OLDIFS"
 
 	set_y
 	TOP=$((Y - NUMBER_OF_CHOICES))
