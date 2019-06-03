@@ -23,7 +23,7 @@ echo $CHOICE
 
 
 ---------
-###Example 2:
+### Example 2:
 
 Ask user to select from a set of options
 
@@ -41,7 +41,7 @@ echo $CHOSEN_LINES
 
 
 ---------
-###Example 3:
+### Example 3:
 
 ```sh
 
