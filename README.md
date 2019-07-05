@@ -2,7 +2,7 @@
 Some helpful functions for making interactive bash scripts on Linux terminal respond to cursor keys for data entry.
 
 
-## _select_, _multi-select_ and _select name-value_
+## _select_, _multi-select_ and _select value_
 
 ----------
 ### Example 1:
