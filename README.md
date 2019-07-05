@@ -2,7 +2,7 @@
 Some helpful functions for making interactive bash scripts on Linux terminal respond to cursor keys for data entry.
 
 
-## select and multi-select
+## select and multi-select and select name for corresponding value
 
 ----------
 ### Example 1:
@@ -58,3 +58,26 @@ choose_one
 if [ ${CHOICE:0:1} == "3" ]; then 
   echo "Somehow it really was option 3 that was selected!" 
 fi 
+```
+
+
+----------
+### Example 4:
+
+```sh
+
+source bash_ui.sh
+
+read -r -d '' CHOICES <<EOT 
+one=1 
+two=2
+three=3
+EOT 
+
+choose_one_value
+
+if [ ${CHOICE_VALUE} == "3" ]; then 
+  echo "$CHOICE which corresponds to value 3 was selected!" 
+fi 
+```
+
