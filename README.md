@@ -5,7 +5,7 @@ Some helpful functions for making interactive bash scripts on Linux terminal res
 ## _select_, _multi-select_ and _select value_
 
 ----------
-### Example 1:
+### Example 1 (_select_):
 
 Allow a user to select a path
 
@@ -23,7 +23,7 @@ echo $CHOICE
 
 
 ---------
-### Example 2:
+### Example 2 (_select multiple_):
 
 Ask user to select from a set of options
 
@@ -41,7 +41,7 @@ echo $CHOSEN_LINES
 
 
 ---------
-### Example 3:
+### Example 3 (_select_):
 
 ```sh
 
@@ -62,7 +62,7 @@ fi
 
 
 ----------
-### Example 4:
+### Example 4 (_select value_):
 
 ```sh
 
