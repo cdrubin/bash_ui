@@ -141,6 +141,39 @@ function choose_one() {
 	CHOICE=`echo "$CHOICES" | sed -n "${CHOICE_NUMBER}p"`
 }
 
+#
+# $CHOICES should be a string of lines of the available choices with name=value on each line
+# (it will be modified to just contain the name values)
+# $VALUES will be set
+# $TOP will be set
+# $CHOICE will be set
+# $CHOICE_VALUE will be set
+#
+
+function choose_one_value() {
+
+  declare -a VALUES
+
+  OLDIFS="$IFS"
+  IFS=$'\n' # make newlines the token breaks
+  CHOICE_NUMBER=0
+  for ENTRY in $CHOICES; do  
+    IFS='=' PARTS=( $ENTRY )
+    CHOICES[$CHOICE_NUMBER]=${PARTS[0]}
+    VALUES[$CHOICE_NUMBER]=${PARTS[1]}
+    CHOICE_NUMBER=$((CHOICE_NUMBER + 1))
+  done
+
+  IFS=$'\n'
+  CHOICES=${CHOICES[*]}
+
+  IFS="$OLDIFS"
+	
+  choose_one
+  CHOICE_VALUE=${VALUES[$((CHOICE_NUMBER - 1))]}
+  
+}
+
 
 
 #
@@ -245,4 +278,5 @@ function choose_multiple() {
 	CHOICE=`echo "$CHOICES" | sed -n "${CHOICE_NUMBER}p"`
 
 }
+
 

@@ -1,0 +1,3 @@
+hippo=H
+indigo=I
+jelly=J
