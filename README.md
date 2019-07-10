@@ -2,7 +2,7 @@
 Some helpful functions for making interactive bash scripts on Linux terminal respond to cursor keys for data entry.
 
 
-[_DOWNLOAD_|google.com]
+[_DOWNLOAD_](https://raw.githubusercontent.com/cdrubin/bash_ui/master/bash_ui.sh)
 
 
 ## _select_, _multi-select_ and _select value_
