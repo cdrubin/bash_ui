@@ -81,17 +81,19 @@ function list_contains() {
 #
 
 function _choose_refresh() {
-	tput cup $TOP 0
+	echo -e "\033[${TOP};0H"
+	#tput cup $TOP 0
 	NUM=1
-	#while read -r ENTRY; do
 
 	OLDIFS="$IFS"
 	IFS=$'\n' # make newlines the token breaks
 	for ENTRY in $CHOICES; do
 		if [ $NUM -eq $CHOICE_NUMBER ]; then
-			tput smso; echo $ENTRY; tput rmso;
+			#tput smso; echo $ENTRY; tput rmso;
+			echo -n -e "\033[7m"; echo -n $ENTRY; echo -e "\033[0m"
 		else
-			tput el; echo $ENTRY
+			#tput el; echo $ENTRY
+			echo -n -e "\033[K"; echo $ENTRY
 		fi
 		((NUM++))
 	done;
@@ -152,25 +154,25 @@ function choose_one() {
 
 function choose_one_value() {
 
-  declare -a VALUES
+	declare -a VALUES
 
-  OLDIFS="$IFS"
-  IFS=$'\n' # make newlines the token breaks
-  CHOICE_NUMBER=0
-  for ENTRY in $CHOICES; do  
-    IFS='=' PARTS=( $ENTRY )
-    CHOICES[$CHOICE_NUMBER]=${PARTS[0]}
-    VALUES[$CHOICE_NUMBER]=${PARTS[1]}
-    CHOICE_NUMBER=$((CHOICE_NUMBER + 1))
-  done
+	OLDIFS="$IFS"
+	IFS=$'\n' # make newlines the token breaks
+	CHOICE_NUMBER=0
+	for ENTRY in $CHOICES; do  
+		IFS='=' PARTS=( $ENTRY )
+		CHOICES[$CHOICE_NUMBER]=${PARTS[0]}
+		VALUES[$CHOICE_NUMBER]=${PARTS[1]}
+		CHOICE_NUMBER=$((CHOICE_NUMBER + 1))
+	done
 
-  IFS=$'\n'
-  CHOICES=${CHOICES[*]}
+	IFS=$'\n'
+	CHOICES=${CHOICES[*]}
 
-  IFS="$OLDIFS"
-	
-  choose_one
-  CHOICE_VALUE=${VALUES[$((CHOICE_NUMBER - 1))]}
+	IFS="$OLDIFS"
+
+	choose_one
+	CHOICE_VALUE=${VALUES[$((CHOICE_NUMBER - 1))]}
   
 }
 
