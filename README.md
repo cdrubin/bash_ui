@@ -1,6 +1,7 @@
 # bash_ui 
 Some helpful functions for making interactive bash scripts on Linux terminal respond to cursor keys for data entry.
 
+(and now not dependent on tput from ncurses)
 
 [_DOWNLOAD_](https://raw.githubusercontent.com/cdrubin/bash_ui/master/bash_ui.sh)
 
