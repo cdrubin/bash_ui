@@ -272,7 +272,7 @@ function choose_multiple() {
 
 			_update_chosen
 
-			CHOICES=`echo "$CHOICES" | sed "s/>.*/>$CHOSEN/"`
+			CHOICES=`echo "$CHOICES" | sed "s#>.*#>$CHOSEN#"`
 			_choose_refresh
 		fi
 	done
