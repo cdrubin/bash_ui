@@ -21,7 +21,7 @@ source bash_ui.sh
 CHOICES=`find . -maxdepth 1 -mindepth 1 -type d -printf '%f\n'`
 choose_one
 
-echo $CHOICE
+echo $CHOSEN
 
 ```
 
@@ -39,7 +39,6 @@ CHOICES=`find . -maxdepth 1 -mindepth 1 -type d -printf '%f\n'`
 choose_multiple
 
 echo $CHOSEN
-echo $CHOSEN_LINES
 
 ```
 
@@ -52,14 +51,14 @@ echo $CHOSEN_LINES
 source bash_ui.sh
 
 read -r -d '' CHOICES <<EOT 
-1. Option 1 
-2. Yes, option 2 
-3. Believe it or not, option 3 
+1. Option 1=1 
+2. Yes, option 2=2 
+3. Believe it or not, option 3=3 
 EOT 
 
 choose_one
 
-if [ ${CHOICE:0:1} == "3" ]; then 
+if [ "$CHOSEN" == "3" ]; then 
   echo "Somehow it really was option 3 that was selected!" 
 fi 
 ```
@@ -76,12 +75,13 @@ read -r -d '' CHOICES <<EOT
 one=1 
 two=2
 three=3
+all=1\n2\n3
 EOT 
 
-choose_one_value
+choose_one
 
-if [ ${CHOICE_VALUE} == "3" ]; then 
-  echo "$CHOICE which corresponds to value 3 was selected!" 
+if [ ${CHOSEN} == "3" ]; then 
+  echo "'three' which corresponds to value 3 was selected!" 
 fi 
 ```
 
