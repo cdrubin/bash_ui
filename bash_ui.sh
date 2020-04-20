@@ -1,9 +1,7 @@
-
-
 # MIT license, explained here:
 #   http://www.tldrlegal.com/l/mit
 
-# Copyright (c) 2015 Cefan Daniel Rubin
+# Copyright (c) 2020 Cefan Daniel Rubin
 #
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -30,255 +28,225 @@
 #   https://github.com/cdrubin/bash_ui
 
 
+if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    echo "bash_ui.sh requires bash version 4 or greater"
+    exit
+fi
 
 
-#
-# Public function to get the current screen line number
-#
-# $Y will be set
-#
+declare -A _CHOICES
+declare _CHOICES_ORDER
+declare _NUMBER_OF_CHOICES
+declare _HIGHLIGHTED_CHOICE
+
+
+function _initialise() {
+
+    local CHOICE_NUMBER=0
+    local PARTS=''
+    _CHOICES=()
+    _CHOICES_ORDER=()
+    #unset _CHOICES; declare -A _CHOICES
+    #unset _CHOICES_ORDER; declare _CHOICES_ORDER
+    local IFS=$'\n';
+    for ENTRY in $CHOICES; do
+        IFS='=' PARTS=( $ENTRY )
+        local KEY="${PARTS[0]}"; local VALUE="${PARTS[1]}"
+        if [ "$VALUE" == "" ]; then VALUE="$KEY"; fi
+        
+        _CHOICES["$KEY"]=$VALUE
+        _CHOICES_ORDER+=( "$KEY" )
+    done
+
+    _NUMBER_OF_CHOICES="${#_CHOICES[@]}"
+}
+
 
 function set_y() {
-	exec < /dev/tty
-	oldstty=$(stty -g)
-	stty raw -echo min 0
-	echo -en "\033[6n" > /dev/tty
-	IFS=';' read -r -d R -a pos
-	stty $oldstty
-	Y=$((${pos[0]:2} - 1))
+    exec < /dev/tty
+    local OLDSTTY=$(stty -g)
+    stty raw -echo min 0
+    echo -en "\033[6n" > /dev/tty
+    IFS=';' read -r -d R -a pos
+    stty $OLDSTTY
+    _Y=$((${pos[0]:2} - 1))
 }
 
-
-#
-# Treat a multiline-string as an item list and determine
-# whether the list $1 contains the item $2, echo'ing '1'
-# if true and 0 otherwise
-#
-
-function list_contains() {
-
-	LIST="$1"
-	SEEKING="$2"
-
-	RESULT=0
-
-	while read -r ENTRY; do
-		if [ "$ENTRY" == "$SEEKING" ]; then
-			RESULT=1
-		fi
-	done <<< "${LIST:1}"
-
-	echo $RESULT
-}
-
-
-
-#
-# Private function used by choose to rewrite a set of lines to the screen
-# $TOP should have been set by choose()
-# $CHOICES is the array of choice lines
-# $CHOICE_NUMBER is the currently selected choice set by choose()
-#
 
 function _choose_refresh() {
-	echo -e "\033[${TOP};0H"
-	#tput cup $TOP 0
-	NUM=1
-
-	OLDIFS="$IFS"
-	IFS=$'\n' # make newlines the token breaks
-	for ENTRY in $CHOICES; do
-		if [ $NUM -eq $CHOICE_NUMBER ]; then
-			#tput smso; echo $ENTRY; tput rmso;
-			echo -n -e "\033[7m"; echo -n $ENTRY; echo -e "\033[0m"
-		else
-			#tput el; echo $ENTRY
-			echo -n -e "\033[K"; echo $ENTRY
-		fi
-		((NUM++))
-	done;
-	IFS="$OLDIFS"
-
+    echo -e "\033[${_TOP};0H"
+    local NUM=1
+        
+    for ENTRY in "${_CHOICES_ORDER[@]}"; do
+        if [ $NUM -eq $_HIGHLIGHTED_CHOICE ]; then
+            echo -n -e "\033[7m"; echo -n "$ENTRY"; echo -e "\033[0m"
+        else
+            echo -n -e "\033[K"; echo $ENTRY
+        fi
+        ((NUM++))
+    done
 }
 
 
-#
-# $CHOICES should be a string of lines of the available choices
-# $TOP will be set
-# $CHOICE will be set
-#
+# if CHOSEN key has a value with newlines (when refer to multiple keys) then update CHOSEN to all of those keys
+function _chosen_handle_multiple_valuekeys() {
+
+    local KEY="$CHOSEN"
+    local VALUE=${_CHOICES[$KEY]}
+    
+    # if the value at this key contains newlines then convert to an array of keys
+    if [[ "$VALUE" == *"\n"* ]]; then
+        
+        local DELIMITER="\n"
+        local ORIG=$VALUE$DELIMITER
+        
+        CHOSEN=()
+        while [[ $ORIG ]]; do
+            CHOSEN+=( "${ORIG%%"$DELIMITER"*}" );
+            ORIG=${ORIG#*"$DELIMITER"};
+        done;
+    fi
+}
+
+
+# convert a single key or array of keys to their corresponding values
+function _chosen_keys_to_values() {
+
+    local KEYS="${CHOSEN[@]}"
+    
+    CHOSEN=()
+    for KEY in ${KEYS[@]}; do
+        CHOSEN+=( ${_CHOICES[$KEY]} )
+    done;
+}
+
+
+function _chosen_to_newlines_output() {
+
+    local OUTPUT
+    
+    printf -v OUTPUT  "%s\n" "${CHOSEN[@]}"
+    CHOSEN=${OUTPUT%?}
+}
+
 
 function choose_one() {
-	NUMBER_OF_CHOICES=`echo "$CHOICES" | wc -l`
-	CHOICE_NUMBER=1
 
-	OLDIFS="$IFS"
-	IFS=$'\n' # make newlines the token breaks
-	# print choices for the first time
-	for ENTRY in "$CHOICES"; do
-		echo "$ENTRY"
-	done
-	IFS="$OLDIFS"
+    _initialise
+    
+    _HIGHLIGHTED_CHOICE=1
+    
+    for ENTRY in "${_CHOICES_ORDER[@]}"; do
+        echo $ENTRY
+    done
 
-	set_y
-	TOP=$((Y - NUMBER_OF_CHOICES))
+    set_y
+    _TOP=$((_Y - _NUMBER_OF_CHOICES))
 
-	_choose_refresh
+    _choose_refresh
 
-	ESC=$(echo -en "\033")                     # define ESC
-	while :;do                                 # infinite loop
-		read -s -n3 KEY 2>/dev/null >&2        # read quietly three characters of input
-		if [ "$KEY" == "$ESC[A" ]; then
-			if [ $CHOICE_NUMBER -gt 1 ]; then ((CHOICE_NUMBER--)); fi;
-			_choose_refresh
-		fi
+    # kwy handling thanks to: https://stackoverflow.com/a/56200043
+    while read -sn1 key; do
 
-		if [ "$KEY" == "$ESC[B" ]; then
-			if [ $CHOICE_NUMBER -lt $NUMBER_OF_CHOICES ]; then ((CHOICE_NUMBER++)); fi;
-			_choose_refresh
-		fi
-		if [ "$KEY" == "$ESCM" ]; then break; fi
-	done
+        read -sn1 -t 0.0001 k1; read -sn1 -t 0.0001 k2; read -sn1 -t 0.0001 k3
+        key+=${k1}${k2}${k3}
 
-	CHOICE=`echo "$CHOICES" | sed -n "${CHOICE_NUMBER}p"`
+        case "$key" in
+            $'\e[A'|$'\e0A')  # up arrow
+                if [ $_HIGHLIGHTED_CHOICE -gt 1 ]; then ((_HIGHLIGHTED_CHOICE--)); fi; _choose_refresh;;
+
+            $'\e[B'|$'\e0B')  # down arrow
+                if [ $_HIGHLIGHTED_CHOICE -lt $_NUMBER_OF_CHOICES ]; then ((_HIGHLIGHTED_CHOICE++)); fi; _choose_refresh;;
+
+            '')  # whitespace character
+                break
+        esac
+    done
+    
+    # CHOSEN set to the selected key
+    CHOSEN=${_CHOICES_ORDER[((_HIGHLIGHTED_CHOICE-1))]}
+    
+    _chosen_handle_multiple_valuekeys
+    _chosen_keys_to_values
+    _chosen_to_newlines_output
 }
 
-#
-# $CHOICES should be a string of lines of the available choices with name=value on each line
-# (it will be modified to just contain the name values)
-# $VALUES will be set
-# $TOP will be set
-# $CHOICE will be set
-# $CHOICE_VALUE will be set
-#
-
-function choose_one_value() {
-
-	declare -a VALUES
-
-	OLDIFS="$IFS"
-	IFS=$'\n' # make newlines the token breaks
-	CHOICE_NUMBER=0
-	for ENTRY in $CHOICES; do  
-		IFS='=' PARTS=( $ENTRY )
-		CHOICES[$CHOICE_NUMBER]=${PARTS[0]}
-		VALUES[$CHOICE_NUMBER]=${PARTS[1]}
-		CHOICE_NUMBER=$((CHOICE_NUMBER + 1))
-	done
-
-	IFS=$'\n'
-	CHOICES=${CHOICES[*]}
-
-	IFS="$OLDIFS"
-
-	choose_one
-	CHOICE_VALUE=${VALUES[$((CHOICE_NUMBER - 1))]}
-  
-}
-
-
-
-#
-# updates the value of CHOSEN according to
-# the items in CHOSEN_NUMBERS and the choices in
-# CHOICES
-#
-
-function _update_chosen() {
-
-	CHOSEN=""
-	CHOSEN_LINES=""
-	for i in $(seq 0 $NUMBER_OF_CHOICES); do
-		for ENTRY in $CHOSEN_NUMBERS; do
-			#echo $ENTRY
-			if [ "$ENTRY" == "$i" ]; then
-				CHOICE_LINE=`echo "$CHOICES" | sed -n "$ENTRY"P`
-				#CHOSEN_NUMBERS=$(printf "$CHOSEN_NUMBERS\n$CHOICE_NUMBER")
-				CHOSEN_LINES=$(printf "$CHOSEN_LINES\n$CHOICE_LINE")
-				CHOSEN="$CHOSEN $CHOICE_LINE"
-				#echo "here"
-			fi
-		done
-	done
-}
-
-
-#
-# $CHOICES should be a string of lines of the available choices
-# $TOP will be set
-# $CHOICE will be set
-# $CHOSEN with be set as a space separated string of the chosen items
-# $CHOSEN_LINES with be set as a newline separated string of the chosen items
-#
 
 function choose_multiple() {
 
-	CHOICES="$CHOICES"$'\n'">"
-	NUMBER_OF_CHOICES=`echo "$CHOICES" | wc -l`
+    _initialise
 
-	CHOICE_NUMBER=1
-	CHOSEN_NUMBERS=""
+    _HIGHLIGHTED_CHOICE=1
+    
+    # add 'submit' faux last choice
+    _CHOICES_ORDER+=( ">" )
+    ((_NUMBER_OF_CHOICES++))
 
-	# print choices for the first time
-	OLDIFS="$IFS"
-	IFS=$'\n' # make newlines the token breaks
-	for ENTRY in $CHOICES; do
-		echo $ENTRY
-	done;
-	IFS="$OLDIFS"
+    # associative array, indexed by choice key, when set it has been selected
+    declare -A CHOSEN_KEYS
+    
+    # print choices for the first time
+    for ENTRY in "${_CHOICES_ORDER[@]}"; do
+        echo "$ENTRY"
+    done
+    
+    set_y
+    _TOP=$((_Y - _NUMBER_OF_CHOICES ))
 
-	set_y
-	TOP=$((Y - NUMBER_OF_CHOICES))
+    _choose_refresh
 
-	_choose_refresh
+        # kwy handling thanks to: https://stackoverflow.com/a/56200043
+    while read -sn1 key; do
 
-	ESC=$(echo -en "\033")                     # define ESC
-	while :;do                                 # infinite loop
-		read -s -n3 KEY 2>/dev/null >&2        # read quietly three characters of input
-		if [ "$KEY" == "$ESC[A" ]; then
-			if [ $CHOICE_NUMBER -gt 1 ]; then ((CHOICE_NUMBER--)); fi;
-			_choose_refresh
-		fi
+        read -sn1 -t 0.0001 k1; read -sn1 -t 0.0001 k2; read -sn1 -t 0.0001 k3
+        key+=${k1}${k2}${k3}
 
-		if [ "$KEY" == "$ESC[B" ]; then
-			if [ $CHOICE_NUMBER -lt $NUMBER_OF_CHOICES ]; then ((CHOICE_NUMBER++)); fi;
-			_choose_refresh
-		fi
+        case "$key" in
+            $'\e[A'|$'\e0A')  # up arrow
+                if [ $_HIGHLIGHTED_CHOICE -gt 1 ]; then ((_HIGHLIGHTED_CHOICE--)); fi; _choose_refresh;;
 
-		if [ "$KEY" == "$ESCM" ]; then
-			if [ $CHOICE_NUMBER -eq $NUMBER_OF_CHOICES ]; then
-				CHOSEN_LINES="${CHOSEN_LINES:1}"
-				CHOSEN="${CHOSEN:1}"
+            $'\e[B'|$'\e0B')  # down arrow
+                if [ $_HIGHLIGHTED_CHOICE -lt $_NUMBER_OF_CHOICES ]; then ((_HIGHLIGHTED_CHOICE++)); fi; _choose_refresh;;
 
-				break;
-			fi;
-
-			if [ $(list_contains "$CHOSEN_NUMBERS" "$CHOICE_NUMBER") -eq 1 ]; then
-				# remove an item line
-				NEW_CHOSEN_NUMBERS=""
-
-				while read -r ENTRY; do
-					if [ "$ENTRY" != "$CHOICE_NUMBER" ]; then
-						NEW_CHOSEN_NUMBERS=$(printf "$NEW_CHOSEN_NUMBERS\n$ENTRY")
-					fi
-				done <<< "${CHOSEN_NUMBERS:1}"
-
-				CHOSEN_NUMBERS="$NEW_CHOSEN_NUMBERS"
-			else
-				# add a new item line
-				CHOSEN_NUMBERS=$(printf "$CHOSEN_NUMBERS\n$CHOICE_NUMBER")
-
-			fi
-
-			_update_chosen
-
-			CHOICES=`echo "$CHOICES" | sed "s#>.*#>$CHOSEN#"`
-			_choose_refresh
-		fi
-	done
-
-	CHOICE=`echo "$CHOICES" | sed -n "${CHOICE_NUMBER}p"`
+            '')  # whitespace character
+            
+                # if last entry '> ...' was selected stop
+                if [ $_HIGHLIGHTED_CHOICE -eq $_NUMBER_OF_CHOICES ]; then
+                    unset CHOSEN;
+                    for i in "${_CHOICES_ORDER[@]}"; do
+                        if [ -v "CHOSEN_KEYS[$i]" ]; then
+                            CHOSEN+=( "$i" )
+                        fi
+                    done
+                    _chosen_keys_to_values
+                    _chosen_to_newlines_output
+                    
+                    break
+                fi
+                
+                unset CHOSEN; CHOSEN=${_CHOICES_ORDER[(($_HIGHLIGHTED_CHOICE - 1))]}
+                _chosen_handle_multiple_valuekeys
+                 
+                for i in "${CHOSEN[@]}"; do
+                    if [ -v "CHOSEN_KEYS[$i]" ]; then
+                        unset CHOSEN_KEYS["$i"]
+                    else
+                        CHOSEN_KEYS["$i"]="chosen"
+                    fi
+                done
+                
+                # update the last entry to show selection
+                local _DISPLAY_CHOSEN=">"
+                for i in "${_CHOICES_ORDER[@]}"; do
+                    if [ -v "CHOSEN_KEYS[$i]" ]; then
+                        _DISPLAY_CHOSEN+=" $i"
+                    fi
+                done
+                
+                _CHOICES_ORDER[$((_NUMBER_OF_CHOICES - 1))]=$_DISPLAY_CHOSEN
+                _choose_refresh
+        esac
+    done
 
 }
-
 

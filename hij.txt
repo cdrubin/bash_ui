@@ -1,3 +1,9 @@
+giraffe=G
 hippo=H
 indigo=I
 jelly=J
+kisses=K
+marmite=M
+(animals)=giraffe\nhippo
+(spreads)=jelly\nmarmite
+(all)=giraffe\nhippo\nindigo\njelly\nkisses\nmarmite
