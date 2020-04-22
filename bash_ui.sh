@@ -113,8 +113,9 @@ function _chosen_handle_multiple_valuekeys() {
 function _chosen_keys_to_values() {
 
     local KEYS="${CHOSEN[@]}"
-    
+        
     CHOSEN=()
+    local IFS=$'\n'
     for KEY in ${KEYS[@]}; do
         CHOSEN+=( ${_CHOICES[$KEY]} )
     done;
@@ -162,10 +163,10 @@ function choose_one() {
                 break
         esac
     done
-    
+
     # CHOSEN set to the selected key
     CHOSEN=${_CHOICES_ORDER[((_HIGHLIGHTED_CHOICE-1))]}
-    
+
     _chosen_handle_multiple_valuekeys
     _chosen_keys_to_values
     _chosen_to_newlines_output
