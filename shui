@@ -1,0 +1,140 @@
+# !/bin/sh
+
+
+# MIT license, explained here:
+#   http://www.tldrlegal.com/l/mit
+
+# Copyright (c) 2020 Cefan Daniel Rubin
+#
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+# Latest:
+#   https://github.com/cdrubin/bash_ui
+
+
+# Examples:
+
+# chosen_homedir=`find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | shui choose-one`
+
+
+if (( $# != 1 )); then
+    echo 'shui expects one mode argument, all other input is expected via /dev/stdin'
+    exit
+fi
+
+
+# internal variables
+_stdin=""
+_selected_line=1
+_chosen=""
+_line_count=0
+_top=0
+_row=0
+
+# shell
+_oldIFS=IFS
+IFS=$'\n'
+
+
+# read from stdin and don't block if empty
+__=""
+_stdin=""
+read -N1 -t1 __  && {
+  (( $? <= 128 ))  && {
+    IFS= read -rd '' _stdin
+    _stdin="$__$_stdin"
+  }
+}
+#printf "%s" "$_stdin"
+
+
+# count number of lines now in _stdin
+_line_count=$(($(printf "%s\n" "$_stdin" | wc -l) - 1))
+#echo $_line_count
+
+
+
+function set_row() {
+    exec < /dev/tty
+    local _oldstty=$(stty -g)
+    stty raw -echo min 0
+    echo -en "\033[6n" > /dev/tty
+    IFS=';' read -r -d R -a pos
+    stty $_oldstty
+    _row=$((${pos[0]:2} - 1))
+}
+
+
+function refresh() {
+    echo -e "\033[${_top};0H"
+
+    _count=0
+    for _line in $_stdin; do
+        _count=$((_count+1))
+        if [ $_count -eq $_selected_line ]; then
+            echo -n -e "\033[7m"; echo -n "$_line"; echo -e "\033[0m"
+        else
+            echo -n -e "\033[K"; echo $_line
+        fi
+    done
+}
+
+
+
+# print out the choices
+printf "%s" "$_stdin"
+
+
+# initialize
+set_row
+_top=$((_row - _line_count))
+refresh
+
+
+# key handling thanks to: https://stackoverflow.com/a/56200043
+while read -sn1 key; do
+
+    read -sn1 -t 0.0001 k1; read -sn1 -t 0.0001 k2; read -sn1 -t 0.0001 k3
+    key+=${k1}${k2}${k3}
+
+    case "$key" in
+        $'\e[A'|$'\e0A')  # up arrow
+            if [ $_selected_line -gt 1 ]; then ((_selected_line--)); fi; refresh;;
+
+        $'\e[B'|$'\e0B')  # down arrow
+            if [ $_selected_line -lt $_line_count ]; then ((_selected_line++)); fi; refresh;;
+
+        '')  # whitespace character
+            break
+    esac
+done
+
+
+_count=0
+for _line in $_stdin; do
+    _count=$((_count+1))
+    if [ $_count -eq $_selected_line ]; then
+        echo "$_line" > /dev/stderr
+    fi
+done
+
+IFS=_oldIFS

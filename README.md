@@ -85,3 +85,15 @@ if [ ${CHOSEN} == "3" ]; then
 fi 
 ```
 
+
+
+----------
+### Example 5 (now for something completely different)
+
+```sh
+#!/bin/bash
+
+result=$(find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | ./shui one 2>&1 1>/dev/tty)
+echo "Chosen home dir: $result"
+
+```
