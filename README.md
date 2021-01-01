@@ -88,12 +88,12 @@ fi
 
 
 ----------
-### Example 5 (now for something completely different)
+### Example 5 (_now for something completely different_)
 
 ```sh
 #!/bin/bash
 
-result=$(find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | ./shui one 2>&1 1>/dev/tty)
+result=$(find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | ./shui 2>&1 1>/dev/tty)
 echo "Chosen home dir: $result"
 
 ```

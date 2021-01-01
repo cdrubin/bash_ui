@@ -1,4 +1,4 @@
-# !/bin/sh
+# !/bin/bash
 
 
 # MIT license, explained here:
@@ -31,16 +31,6 @@
 #   https://github.com/cdrubin/bash_ui
 
 
-# Examples:
-
-# chosen_homedir=`find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | shui choose-one`
-
-
-if (( $# != 1 )); then
-    echo 'shui expects one mode argument, all other input is expected via /dev/stdin'
-    exit
-fi
-
 
 # internal variables
 _stdin=""
@@ -56,21 +46,14 @@ IFS=$'\n'
 
 
 # read from stdin and don't block if empty
-__=""
-_stdin=""
-read -N1 -t1 __  && {
-  (( $? <= 128 ))  && {
-    IFS= read -rd '' _stdin
-    _stdin="$__$_stdin"
-  }
-}
-#printf "%s" "$_stdin"
+if [ ! -t 0 ]; then
+    read -d '' _stdin
+fi
 
 
 # count number of lines now in _stdin
-_line_count=$(($(printf "%s\n" "$_stdin" | wc -l) - 1))
+_line_count=$(($(printf "%s\n" "$_stdin" | wc -l)))
 #echo $_line_count
-
 
 
 function set_row() {
@@ -101,7 +84,7 @@ function refresh() {
 
 
 # print out the choices
-printf "%s" "$_stdin"
+printf "%s\n" "$_stdin"
 
 
 # initialize
@@ -110,11 +93,16 @@ _top=$((_row - _line_count))
 refresh
 
 
-# key handling thanks to: https://stackoverflow.com/a/56200043
+_selected_line=1
+
 while read -sn1 key; do
 
-    read -sn1 -t 0.0001 k1; read -sn1 -t 0.0001 k2; read -sn1 -t 0.0001 k3
-    key+=${k1}${k2}${k3}
+    if [ "$key" == $'\e' ]; then
+        read -sn1 -t 1 k1; read -sn1 -t 1 k2;
+    elif [ "$key" == "" ]; then
+        break
+    fi
+    key+=${k1}${k2}
 
     case "$key" in
         $'\e[A'|$'\e0A')  # up arrow
@@ -122,9 +110,6 @@ while read -sn1 key; do
 
         $'\e[B'|$'\e0B')  # down arrow
             if [ $_selected_line -lt $_line_count ]; then ((_selected_line++)); fi; refresh;;
-
-        '')  # whitespace character
-            break
     esac
 done
 
