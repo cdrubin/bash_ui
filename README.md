@@ -90,6 +90,8 @@ fi
 ----------
 ### Example 5 (_now for something completely different_)
 
+(welcome to __shui__! [DOWNLOAD](https://raw.githubusercontent.com/cdrubin/bash_ui/master/shui))
+
 ```sh
 #!/bin/bash
 
