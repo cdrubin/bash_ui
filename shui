@@ -34,11 +34,14 @@
 
 # internal variables
 _stdin=""
+_options=""
+_mode="single"
 _selected_line=1
 _chosen=""
 _line_count=0
 _top=0
 _row=0
+
 
 # shell
 _oldIFS=IFS
@@ -51,8 +54,22 @@ if [ ! -t 0 ]; then
 fi
 
 
-# count number of lines now in _stdin
-_line_count=$(($(printf "%s\n" "$_stdin" | wc -l)))
+# look for mode parameter
+if [ $# -gt 0 ]; then
+    if [[ $1 =~ multi ]]; then
+        # set mode and add multiple select line to options
+        _mode=multiple
+        _options=$_stdin$'\n'">"
+    else
+        _options=$_stdin
+    fi
+else
+    _options=$_stdin
+fi
+
+
+# count number of lines now in _options
+_line_count=$(($(printf "%s\n" "$_options" | wc -l)))
 #echo $_line_count
 
 
@@ -71,7 +88,7 @@ function refresh() {
     echo -e "\033[${_top};0H"
 
     _count=0
-    for _line in $_stdin; do
+    for _line in $_options; do
         _count=$((_count+1))
         if [ $_count -eq $_selected_line ]; then
             echo -n -e "\033[7m"; echo -n "$_line"; echo -e "\033[0m"
@@ -84,7 +101,7 @@ function refresh() {
 
 
 # print out the choices
-printf "%s\n" "$_stdin"
+printf "%s\n" "$_options"
 
 
 # initialize
@@ -100,7 +117,33 @@ while read -sn1 key; do
     if [ "$key" == $'\e' ]; then
         read -sn1 -t 1 k1; read -sn1 -t 1 k2;
     elif [ "$key" == "" ]; then
-        break
+        if [ "$_mode" == "multiple" ]; then
+
+            # if on the last option (multiple) then break
+            if [ $_selected_line -eq $_line_count ]; then
+                break
+            # if on an option then add/remove it
+            else
+                _option_chosen=$( echo "${_options}" | sed "${_selected_line}q;d" )
+                #exit
+                # if _chosen contains _option_chosen then remove it
+                if [[ "$_chosen" =~ "${_option_chosen}" ]]; then
+                    _chosen=$( echo "${_chosen}" | grep -v "$_option_chosen" )
+                # otherwise add it
+                else
+                    _chosen="$_chosen"$'\n'"$_option_chosen"
+                    # remove empty lines
+                    _chosen=$( echo "${_chosen}" | sed '/^$/d' )
+                fi
+                
+                _chosen_commas=$( echo "$_chosen" | sed ':a;N;$!ba;s/\n/, /g' )
+                _options=$_stdin$'\n'"> ${_chosen_commas}"
+                refresh
+            fi
+        else
+            _chosen=$( echo "${_options}" | sed "${_selected_line}q;d" )
+            break
+        fi
     fi
     key+=${k1}${k2}
 
@@ -113,13 +156,6 @@ while read -sn1 key; do
     esac
 done
 
-
-_count=0
-for _line in $_stdin; do
-    _count=$((_count+1))
-    if [ $_count -eq $_selected_line ]; then
-        echo "$_line" > /dev/stderr
-    fi
-done
+echo "$_chosen" > /dev/stderr
 
 IFS=_oldIFS
