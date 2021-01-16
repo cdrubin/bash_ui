@@ -85,12 +85,14 @@ if [ ${CHOSEN} == "3" ]; then
 fi 
 ```
 
-
-
-----------
-### Example 5 (_now for something completely different_)
+# shui
 
 (welcome to __shui__! [DOWNLOAD](https://raw.githubusercontent.com/cdrubin/bash_ui/master/shui))
+
+A helper script that does not need to be sourced, works in bash < 4 (hello macOS) and with Linux and Mac terminals
+
+----------
+### Example 5 (_select_)
 
 ```sh
 #!/bin/bash
@@ -99,3 +101,16 @@ result=$(find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | ./shui 2>&1
 echo "Chosen home dir: $result"
 
 ```
+
+----------
+### Example 6 (_select multiple_)
+
+```sh
+#!/bin/bash
+
+result=$(find /home -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | ./shui multiple 2>&1 1>/dev/tty)
+echo "Chosen home directories:"
+echo "$result"
+
+```
+
