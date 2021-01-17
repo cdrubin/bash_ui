@@ -125,10 +125,10 @@ while read -sn1 key; do
             # if on an option then add/remove it
             else
                 _option_chosen=$( echo "${_options}" | sed "${_selected_line}q;d" )
-                #exit
+                
                 # if _chosen contains _option_chosen then remove it
-                if [[ "$_chosen" =~ "${_option_chosen}" ]]; then
-                    _chosen=$( echo "${_chosen}" | grep -v "$_option_chosen" )
+                if echo "$_chosen" | grep "^${_option_chosen}$" > /dev/null; then
+                    _chosen=$( echo "${_chosen}" | grep -v "^$_option_chosen\$" )
                 # otherwise add it
                 else
                     _chosen="$_chosen"$'\n'"$_option_chosen"
@@ -136,7 +136,8 @@ while read -sn1 key; do
                     _chosen=$( echo "${_chosen}" | sed '/^$/d' )
                 fi
                 
-                _chosen_commas=$( echo "$_chosen" | sed ':a;N;$!ba;s/\n/, /g' )
+                _chosen_commas=$( echo "$_chosen" | awk -v ORS=', ' '1' | sed 's/, $//' )
+                
                 _options=$_stdin$'\n'"> ${_chosen_commas}"
                 refresh
             fi
