@@ -53,20 +53,20 @@ if [ ! -t 0 ]; then
     read -d '' _stdin
 fi
 
+# default way of handling options
+_options=$_stdin
 
 # look for mode parameter
 if [ $# -gt 0 ]; then
     if [[ $1 =~ multi ]]; then
         # set mode and add multiple select line to options
         _mode=multiple
-        _options=$_stdin$'\n'">"
-    else
-        _options=$_stdin
+        _options=$_stdin$'\n'">"    
+    elif [[ $1 =~ clean ]]; then
+        # leave less trace of ui in terminal
+        _mode=clean
     fi
-else
-    _options=$_stdin
 fi
-
 
 # count number of lines now in _options
 _line_count=$(($(printf "%s\n" "$_options" | wc -l)))
@@ -85,8 +85,12 @@ function set_row() {
 
 
 function refresh() {
+    # jump to top
     echo -e "\033[${_top};0H"
 
+    # disable wordwrap
+    echo -ne "\x1b[?7l"
+    
     _count=0
     for _line in $_options; do
         _count=$((_count+1))
@@ -96,12 +100,17 @@ function refresh() {
             echo -n -e "\033[K"; echo $_line
         fi
     done
+
+    # enable wordwrap
+    echo -ne "\x1b[?7h"
 }
 
 
 
 # print out the choices
+echo -ne "\x1b[?7l"          # disable wordwrap
 printf "%s\n" "$_options"
+echo -ne "\x1b[?7h"          # enable wordwrap
 
 
 # initialize
@@ -156,6 +165,15 @@ while read -sn1 key; do
             if [ $_selected_line -lt $_line_count ]; then ((_selected_line++)); fi; refresh;;
     esac
 done
+
+if [ "$_mode" == "clean" ]; then
+    echo -e "\033[${_top};0H"               # jump to beginning of line _top
+    for i in $(seq ${_line_count}); do
+      echo -e "\033[2K"                     # clear line
+    done
+    echo -e "\033[${_top};0H"               # jump to beginning of line _top
+    echo "$_chosen"
+fi
 
 echo "$_chosen" > /dev/stderr
 
