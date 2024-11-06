@@ -1,0 +1,63 @@
+# !/bin/bash
+
+
+# internal variables
+_sx=0  # "set x"  }  set with setxy
+_sy=0  # "set y"  }
+_gx=0    # "goto x"  }  used by gotoxy
+_gy=0    # "goto y"  }
+_width=0   # number of columns
+_height=0  # number of rows
+
+
+function setxy() {
+    exec < /dev/tty
+    local _oldstty=$(stty -g)
+    stty raw -echo min 0
+    echo -en "\033[6n" > /dev/tty
+    IFS=';' read -r -d R -a pos
+    stty $_oldstty
+    _sx=$((${pos[1]} - 1))
+    _sy=$((${pos[0]:2}))
+}
+
+function gotoxy() {
+    echo -en "\033[${_gy};0H"
+    echo -en "\033[${_gx}C"
+}
+
+
+function init() {
+    local _oldstty=$(stty -g)
+    stty raw -echo min 0
+    echo -en "\033[1000C" > /dev/tty
+    echo -en "\033[1000;0h" > /dev/tty
+    setxy
+    _width = _sx
+    _height = _sy
+    stty $_oldstty
+}
+
+
+#function clear_screen() {
+#}
+
+
+#set_width
+#echo $_width
+
+#echo -n "Hello"
+#set_row
+#echo col: $_col, row: $_row
+
+#set_col_row
+#_desired_col=$((_col - 1)); _desired_row=$((_row - 1)); goto_desired_col_desired_row
+#echo "BOO"
+#_desired_col=$_col; _desired_row=$_row; goto_desired_col_desired_row
+
+_gx=0; _gy=0; gotoxy; echo -n "Moo"; setxy
+sleep 1; gotoxy; echo -n "Zoo"
+sleep 1; gotoxy; echo -n "Shoe"
+sleep 1; _gx=$_sx; _gy=$_sy; gotoxy; echo ", Moo again"
+
+#_gx=$_sx; _gy=$_sy; gotoxy; sleep 1; echo "You"
