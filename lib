@@ -1,0 +1,169 @@
+#! /bin/bash
+
+ESC="\0033["
+OSC="\0033]"
+SEP=";"
+gx=0
+gy=0
+mx=0
+my=0
+sx=0
+sy=0
+n=1
+
+function gotoXY() {
+	echo -en "${ESC}$((gy + 1))${SEP}$((gx + 1))H"
+}
+
+gx=0; gy=0; gotoXY; echo -n "0"
+gx=1; gy=1; gotoXY; echo -n "1"
+gx=2; gy=2; gotoXY; echo -n "2"
+
+
+
+function moveXY() {
+	if [[ $mx -lt 0 ]]; then
+		echo -en "${ESC}$((-mx))D"
+	elif [[ $mx -gt 0 ]]; then
+		echo -en "${ESC}$((mx))C"
+	fi
+
+	if [[ $my -lt 0 ]]; then
+		echo -en "${ESC}$((-my))A"
+	elif [[ $my -gt 0 ]]; then
+		echo -en "${ESC}$((my))B"
+	fi
+}
+
+mx=0; my=1; moveXY; echo -n "*"  
+mx=0; my=1; moveXY; echo -n "*" 
+mx=0; my=1; moveXY; echo -n "*"
+mx=1; my=0; moveXY; echo -n "*"  
+mx=1; my=0; moveXY; echo -n "*"
+mx=1; my=0; moveXY; echo -n "*"
+
+
+
+function moveUp() {
+	echo -en "${ESC}${n}A"
+}
+
+function moveDown() {
+	echo -en "${ESC}${n}B"
+}
+
+function moveForward() {
+	echo -en "${ESC}${n}C"	
+}
+
+function moveBackward() {
+	echo -en "${ESC}${n}D"	
+}
+
+function gotoLeft() {
+	echo -en "${ESC}1G"
+}
+
+moveUp; moveUp; echo -n "Boo"
+moveDown; moveDown; echo -n "Boo"
+
+function savePosition() {
+	echo -en "${ESC}s"
+}
+
+function restorePosition() {
+	echo -en "${ESC}u"	
+}
+
+savePosition; gotoLeft; echo -n "Left"; restorePosition; echo "More"
+
+function setXY() {
+    exec < /dev/tty
+    local _oldstty=$(stty -g)
+    stty raw -echo min 0
+    echo -en "\033[6n" > /dev/tty
+    IFS=';' read -r -d R -a pos
+    stty $_oldstty
+    sx=$((${pos[1]} - 1))
+    sy=$((${pos[0]:2}))
+}
+
+function nextLine() {
+	echo -en "${ESC}E"
+}
+
+function previousLine() {
+	echo -en "${ESC}F"	
+}
+
+function hideCursor() {
+	echo -en "${ESC}?25l"
+}
+
+function showCursor() {
+	echo -en "${ESC}?25h"
+}
+
+sleep 1; previousLine; sleep 1; previousLine; 
+sleep 1; hideCursor; sleep 1; showCursor; echo -n "Back"
+
+
+
+# TODO: 
+# 1. continue translation to bash!
+# 2. update shui to use these functions (copy those needed in)
+# 3. fix shui to not write lines longer than the width of terminal
+
+# 
+# ansiEscapes.eraseLines = count => {
+# 	let clear = '';
+# 
+# 	for (let i = 0; i < count; i++) {
+# 		clear += ansiEscapes.eraseLine + (i < count - 1 ? ansiEscapes.cursorUp() : '');
+# 	}
+# 
+# 	if (count) {
+# 		clear += ansiEscapes.cursorLeft;
+# 	}
+# 
+# 	return clear;
+# };
+# 
+# ansiEscapes.eraseEndLine = ESC + 'K';
+# ansiEscapes.eraseStartLine = ESC + '1K';
+# ansiEscapes.eraseLine = ESC + '2K';
+# ansiEscapes.eraseDown = ESC + 'J';
+# ansiEscapes.eraseUp = ESC + '1J';
+# ansiEscapes.eraseScreen = ESC + '2J';
+# ansiEscapes.scrollUp = ESC + 'S';
+# ansiEscapes.scrollDown = ESC + 'T';
+# 
+# ansiEscapes.clearScreen = '\u001Bc';
+# 
+# ansiEscapes.clearTerminal = isWindows
+# 	? `${ansiEscapes.eraseScreen}${ESC}0f`
+# 	// 1. Erases the screen (Only done in case `2` is not supported)
+# 	// 2. Erases the whole screen including scrollback buffer
+# 	// 3. Moves cursor to the top-left position
+# 	// More info: https://www.real-world-systems.com/docs/ANSIcode.html
+# 	: `${ansiEscapes.eraseScreen}${ESC}3J${ESC}H`;
+# 
+# ansiEscapes.enterAlternativeScreen = ESC + '?1049h';
+# ansiEscapes.exitAlternativeScreen = ESC + '?1049l';
+# 
+# ansiEscapes.beep = BEL;
+# 
+# ansiEscapes.link = (text, url) => [
+# 	OSC,
+# 	'8',
+# 	SEP,
+# 	SEP,
+# 	url,
+# 	BEL,
+# 	text,
+# 	OSC,
+# 	'8',
+# 	SEP,
+# 	SEP,
+# 	BEL,
+# ].join('');
