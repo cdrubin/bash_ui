@@ -114,3 +114,18 @@ echo "$result"
 
 ```
 
+----------
+### Example 7 (_select multiple from provided heredoc_)
+
+```sh
+#!/bin/bash
+
+echo "Choose your favourite characters"
+read -r -d '' CHOICES <<- EOS
+Roger Ellison
+Duiwel Dewet
+Roger Rabbit
+EOS
+
+result=$(echo -e "$CHOICES" | ./shui 2>&1 1>/dev/tty)
+```
