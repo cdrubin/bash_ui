@@ -1,0 +1,179 @@
+#! /bin/bash
+
+# The intention is for copy-pasting what you need out of this file, not really
+# for it to be used as a library or include file
+
+ESC="\0033["
+OSC="\0033]"
+BEL="\0007"
+SEP=";"
+ELLIPSIS="…"
+gx=0
+gy=0
+mx=0
+my=0
+sx=0
+sy=0
+n=1
+
+function gotoXY() {
+    x=$1; y=$2
+	echo -en "${ESC}$((y))${SEP}$((x))H"
+}
+
+# gotoXY 1 1; echo -n "1"
+# gotoXY 1 2; echo -n "|"
+# gotoXY 1 3; echo -n "|"
+# gotoXY 2 2; echo -n "2"
+# gotoXY 3 3; echo -n "3"
+
+function moveXY() {
+	mx=$1; my=$2
+	if [[ $mx -lt 0 ]]; then
+		echo -en "${ESC}$((-mx))D"
+	elif [[ $mx -gt 0 ]]; then
+		echo -en "${ESC}$((mx))C"
+	fi
+
+	if [[ $my -lt 0 ]]; then
+		echo -en "${ESC}$((-my))A"
+	elif [[ $my -gt 0 ]]; then
+		echo -en "${ESC}$((my))B"
+	fi
+}
+
+# moveXY 0 1; echo -n "*"
+# moveXY 0 1; echo -n "*"
+# moveXY 0 1; echo -n "*"
+# moveXY 1 0; echo -n "*"  
+# moveXY 1 0; echo -n "*"
+# moveXY 1 0; echo -n "*"
+
+
+function moveUp() {
+	n="${1:-1}"
+	echo -en "${ESC}${n}A"
+}
+
+#echo -n "Here"; moveUp 3; echo -n "Up 3"
+
+function moveDown() {
+	n="${1:-1}"
+	echo -en "${ESC}${n}B"
+}
+
+function moveForward() {
+	n="${1:-1}"
+	echo -en "${ESC}${n}C"	
+}
+
+function moveBackward() {
+	n="${1:-1}"
+	echo -en "${ESC}${n}D"	
+}
+
+function gotoLeft() {
+	echo -en "${ESC}1G"
+}
+
+#echo -n "Hello"; gotoLeft; echo -n "h"
+
+# moveUp; moveUp; echo -n "Boo"
+# moveDown; moveDown; echo -n "Boo"
+
+function savePosition() {
+	echo -en "${ESC}s"
+}
+
+function restorePosition() {
+	echo -en "${ESC}u"	
+}
+
+# savePosition; gotoLeft; echo -n "Left"; restorePosition; echo "More"
+
+function setXY() {
+    exec < /dev/tty
+    local _oldstty=$(stty -g)
+    stty raw -echo min 0
+    echo -en "\033[6n" > /dev/tty
+    IFS=';' read -r -d R -a pos
+    stty $_oldstty
+    sx=$((${pos[1]} - 1))
+    sy=$((${pos[0]:2}))
+}
+
+function nextLine() {
+	echo -en "${ESC}E"
+}
+
+function previousLine() {
+	echo -en "${ESC}F"	
+}
+
+function hideCursor() {
+	echo -en "${ESC}?25l"
+}
+
+function showCursor() {
+	echo -en "${ESC}?25h"
+}
+
+# sleep 1; previousLine; sleep 1; previousLine; 
+# sleep 1; hideCursor; sleep 1; showCursor; echo -n "Back"
+
+function eraseEndLine() {
+	echo -en "${ESC}K"	
+}
+
+function eraseStartLine() {
+	echo -en "${ESC}1K"
+}
+
+function eraseLine() {
+	echo -en "${ESC}2K"	
+}
+
+function eraseDown() {
+	echo -en "${ESC}J"
+}
+
+function eraseUp() {
+	echo -en "${ESC}1J"
+}
+
+function eraseScreen() {
+	echo -en "${ESC}2J"
+}
+
+function scrollUp() {
+	echo -en "${ESC}S"
+}
+
+function scrollDown() {
+	echo -en "${ESC}T"
+}
+
+function link() { # $1 url, $2 text 
+	echo -en "${OSC}8${SEP}${SEP}$1${BEL}$2${OSC}8${SEP}${SEP}${BEL}"
+}
+
+# link https://www.google.com Google
+
+function enterAlternateScreen() {
+	echo -en "${ESC}?1049h"
+}
+
+function exitAlternateScreen() {
+	echo -en "${ESC}?1049l"
+}
+
+# sleep 1; enterAlternateScreen; echo "Alternate screen!"; sleep 1; exitAlternateScreen; 
+
+
+
+# TODO: 
+# 2. update shui to use these functions (copy those needed in)
+# 3. fix shui to not write lines longer than the width of terminal
+
+savePosition; hideCursor; gotoXY 10000 10000; setXY; restorePosition; showCursor
+echo "screen width: $sx, height: $sy"

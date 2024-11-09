@@ -35,6 +35,7 @@
 # internal variables
 _stdin=""
 _options=""
+_display_options=""
 _mode="single"
 _selected_line=1
 _chosen=""
@@ -42,6 +43,11 @@ _line_count=0
 _top=0
 _row=0
 
+# ansi handling
+ESC="\0033["
+SEP=";"
+ELLIPSIS="…"
+_sx=0; _sy=0
 
 # shell
 _oldIFS=IFS
@@ -55,6 +61,7 @@ fi
 
 # default way of handling options
 _options=$_stdin
+
 
 # look for mode parameter
 if [ $# -gt 0 ]; then
@@ -73,36 +80,62 @@ _line_count=$(($(printf "%s\n" "$_options" | wc -l)))
 #echo $_line_count
 
 
-function set_row() {
+function gotoXY() {
+    x=$1; y=$2
+	echo -en "${ESC}$((y))${SEP}$((x))H"
+}
+
+
+function setXY() {
     exec < /dev/tty
     local _oldstty=$(stty -g)
     stty raw -echo min 0
     echo -en "\033[6n" > /dev/tty
     IFS=';' read -r -d R -a pos
     stty $_oldstty
-    _row=$((${pos[0]:2} - 1))
+    _sx=$((${pos[1]} - 1))
+    _sy=$((${pos[0]:2}))
+}
+
+
+function hideCursor() {
+	echo -en "${ESC}?25l"
+}
+
+
+function showCursor() {
+	echo -en "${ESC}?25h"
+}
+
+
+function set_row() {
+	setXY
+	_row=$((_sy - 1))
 }
 
 
 function refresh() {
     # jump to top
-    echo -e "\033[${_top};0H"
+    hideCursor
+    gotoXY 0 $((_top + 1))
 
     # disable wordwrap
-    echo -ne "\x1b[?7l"
+    echo -ne "\033[?7l"
     
     _count=0
     for _line in $_options; do
         _count=$((_count+1))
+
         if [ $_count -eq $_selected_line ]; then
-            echo -n -e "\033[7m"; echo -n "$_line"; echo -e "\033[0m"
+            echo -ne "\033[7m"; echo -n "$_line"; echo -e "\033[0m"
         else
-            echo -n -e "\033[K"; echo $_line
+            echo -ne "\033[K"; echo $_line
         fi
     done
 
     # enable wordwrap
-    echo -ne "\x1b[?7h"
+    echo -ne "\033[?7h"
+    showCursor
 }
 
 
@@ -159,10 +192,10 @@ while read -sn1 key; do
 
     case "$key" in
         $'\e[A'|$'\e0A')  # up arrow
-            if [ $_selected_line -gt 1 ]; then ((_selected_line--)); fi; refresh;;
+            if [ $_selected_line -gt 1 ]; then ((_selected_line--)); refresh; fi;;
 
         $'\e[B'|$'\e0B')  # down arrow
-            if [ $_selected_line -lt $_line_count ]; then ((_selected_line++)); fi; refresh;;
+            if [ $_selected_line -lt $_line_count ]; then ((_selected_line++)); refresh; fi;;
     esac
 done
 
