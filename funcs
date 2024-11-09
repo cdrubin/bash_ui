@@ -118,6 +118,15 @@ function showCursor() {
 	echo -en "${ESC}?25h"
 }
 
+function disableWordWrap() {
+    echo -ne "${ESC}[?7l"
+}
+
+function enableWordWrap() {
+    echo -ne "${ESC}[?7h"
+}
+
+
 # sleep 1; previousLine; sleep 1; previousLine; 
 # sleep 1; hideCursor; sleep 1; showCursor; echo -n "Back"
 
