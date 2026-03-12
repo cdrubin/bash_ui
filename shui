@@ -1,4 +1,4 @@
-# !/bin/bash
+#! /bin/bash
 
 
 # MIT license, explained here:
@@ -90,8 +90,10 @@ function setXY() {
     exec < /dev/tty
     local _oldstty=$(stty -g)
     stty raw -echo min 0
+    # flush any stray input before querying cursor position
+    read -rst 0.1 -n 10000 _discard 2>/dev/null || true
     echo -en "\033[6n" > /dev/tty
-    IFS=';' read -r -d R -a pos
+    IFS=';' read -r -d R -t 2 -a pos
     stty $_oldstty
     _sx=$((${pos[1]} - 1))
     _sy=$((${pos[0]:2}))
@@ -129,13 +131,15 @@ function refresh() {
         if [ $_count -eq $_selected_line ]; then
             echo -ne "\033[7m"; echo -n "$_line"; echo -e "\033[0m"
         else
-            echo -ne "\033[K"; echo $_line
+            echo -ne "\033[K"; echo "$_line"
         fi
     done
 
     # enable wordwrap
     echo -ne "\033[?7h"
     showCursor
+    # drain any input that arrived during screen painting
+    read -rst 0.1 -n 10000 _discard 2>/dev/null || true
 }
 
 
@@ -154,7 +158,11 @@ refresh
 
 _selected_line=1
 
+# flush any buffered input from the terminal before reading arrow keys
+read -rst 0.1 -n 10000 _discard 2>/dev/null || true
+
 while read -sn1 key; do
+    k1=""; k2=""
 
     if [ "$key" == $'\e' ]; then
         read -sn1 -t 1 k1; read -sn1 -t 1 k2;
