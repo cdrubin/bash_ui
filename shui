@@ -173,12 +173,7 @@ echo -ne "\x1b[?7h"          # enable wordwrap
 # initialize
 set_row
 _top=$((_row - _line_count))
-# Keep the terminal from echoing keys for the whole selection (`read -s` only silences it while a read is waiting, so a
-# letter typed during a redraw would otherwise be printed under the list). Restore everything on exit.
-_stty_saved=$(stty -g < /dev/tty)
-function cleanup() { stty "$_stty_saved" < /dev/tty 2>/dev/null; showCursor; }
-trap cleanup EXIT
-stty -echo < /dev/tty
+trap showCursor EXIT                         # always give the cursor back
 hideCursor                                   # hidden once for the whole selection, not on every redraw
 refresh
 
