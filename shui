@@ -116,30 +116,50 @@ function set_row() {
 }
 
 
+# Painting is kept flicker-free three ways:
+#  - a line is written first and the rest of the row cleared after (\033[K), so there is never a blank frame;
+#  - on a key press only the two rows that changed are redrawn, not the whole list;
+#  - each redraw is wrapped in synchronized-output markers (?2026), so terminals that support them paint it in one go
+#    (others ignore the markers).
+function syncBegin() { echo -ne "\033[?2026h"; }
+function syncEnd()   { echo -ne "\033[?2026l"; }
+
+# draw option number $1 on its own row (highlighted when selected)
+function drawLine() {
+    local n=$1 text
+    text=$(sed -n "${n}p" <<< "$_options")
+    gotoXY 0 $((_top + n))
+    if [ "$n" -eq "$_selected_line" ]; then
+        echo -ne "\033[7m"; echo -n "$text"; echo -ne "\033[0m\033[K"
+    else
+        echo -n "$text"; echo -ne "\033[K"
+    fi
+}
+
+# leave the cursor just below the list, where a plain (non-clean) run expects to carry on
+function park() {
+    gotoXY 0 $((_top + _line_count + 1))
+}
+
+# redraw everything
 function refresh() {
-    # jump to top
-    hideCursor
-    gotoXY 0 $((_top + 1))
+    syncBegin
+    echo -ne "\033[?7l"                     # disable wordwrap
+    local n
+    for ((n = 1; n <= _line_count; n++)); do drawLine $n; done
+    echo -ne "\033[?7h"                     # enable wordwrap
+    park
+    syncEnd
+}
 
-    # disable wordwrap
+# redraw only the two rows whose highlight changed: move_selection <old> <new>
+function moveSelection() {
+    syncBegin
     echo -ne "\033[?7l"
-    
-    _count=0
-    for _line in $_options; do
-        _count=$((_count+1))
-
-        if [ $_count -eq $_selected_line ]; then
-            echo -ne "\033[7m"; echo -n "$_line"; echo -e "\033[0m"
-        else
-            echo -ne "\033[K"; echo "$_line"
-        fi
-    done
-
-    # enable wordwrap
+    drawLine "$1"; drawLine "$2"
     echo -ne "\033[?7h"
-    showCursor
-    # drain any input that arrived during screen painting
-    read -rst 0.1 -n 10000 _discard 2>/dev/null || true
+    park
+    syncEnd
 }
 
 
@@ -153,6 +173,8 @@ echo -ne "\x1b[?7h"          # enable wordwrap
 # initialize
 set_row
 _top=$((_row - _line_count))
+trap showCursor EXIT                         # always give the cursor back
+hideCursor                                   # hidden once for the whole selection, not on every redraw
 refresh
 
 
@@ -200,10 +222,10 @@ while read -sn1 key; do
 
     case "$key" in
         $'\e[A'|$'\e0A')  # up arrow
-            if [ $_selected_line -gt 1 ]; then ((_selected_line--)); refresh; fi;;
+            if [ $_selected_line -gt 1 ]; then _prev=$_selected_line; ((_selected_line--)); moveSelection $_prev $_selected_line; fi;;
 
         $'\e[B'|$'\e0B')  # down arrow
-            if [ $_selected_line -lt $_line_count ]; then ((_selected_line++)); refresh; fi;;
+            if [ $_selected_line -lt $_line_count ]; then _prev=$_selected_line; ((_selected_line++)); moveSelection $_prev $_selected_line; fi;;
     esac
 done
 
